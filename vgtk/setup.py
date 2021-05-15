@@ -5,7 +5,7 @@ from torch.utils.cpp_extension import BuildExtension, CUDAExtension
 # import epn_gathering as gather
 # import epn_grouping as cuda_nn
 setup(
-    name='vgtk.cuda',
+    name='epnvgtk',
     ext_modules=[
         CUDAExtension('epn_zpconv', [
             'cuda/zpconv_cuda.cpp',
