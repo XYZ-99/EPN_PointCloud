@@ -8,8 +8,8 @@ import torch.nn.functional as F
 from collections import OrderedDict
 
 from torch.nn.modules.batchnorm import _BatchNorm
-from vgtk.spconv import Gathering
-from vgtk.spconv.functional import batched_index_select, acos_safe
+# from vgtk.so3conv import Gathering
+from vgtk.so3conv.functional import batched_index_select, acos_safe
 from vgtk.functional import compute_rotation_matrix_from_quaternion, compute_rotation_matrix_from_ortho6d, so3_mean
 import vgtk.so3conv as sgtk
 

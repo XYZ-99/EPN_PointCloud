@@ -10,7 +10,7 @@ from collections import OrderedDict
 import json
 import vgtk
 import SPConvNets.utils as M
-import vgtk.spconv.functional as L
+import vgtk.so3conv.functional as L
 
 
 class RegSO3ConvModel(nn.Module):
