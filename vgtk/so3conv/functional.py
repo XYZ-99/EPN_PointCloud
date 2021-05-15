@@ -13,7 +13,7 @@ import vgtk
 import vgtk.pc as pctk
 # import vgtk.cuda.zpconv as cuda_zpconv
 # import vgtk.cuda.gathering as gather
-import vgtk.cuda.grouping as cuda_nn
+import grouping as cuda_nn
 
 # import vgtk.zpconv as zpconv
 

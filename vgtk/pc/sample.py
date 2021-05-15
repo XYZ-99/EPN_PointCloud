@@ -2,7 +2,7 @@ import time
 import numpy as np
 import torch
 
-import vgtk.cuda.grouping as cuda_nn
+import grouping as cuda_nn
 import vgtk.utils as utils
 # from vgtk.zpconv import add_shadow_point
 

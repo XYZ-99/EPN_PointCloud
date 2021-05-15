@@ -2,7 +2,7 @@
 import numpy as np
 import torch
 
-import vgtk.cuda.gathering as cuda_gather
+import gathering as cuda_gather
 
 
 # promote input in batch
