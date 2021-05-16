@@ -8,7 +8,7 @@ parser = vgtk.HierarchyArgmentParser()
 exp_args = parser.add_parser("experiment")
 exp_args.add_argument('--experiment-id', type=str, default='playground',
                       help='experiment id')
-exp_args.add_argument('-d', '--dataset-path', type=str, default='data/train/7-scenes-redkitchen',
+exp_args.add_argument('-d', '--dataset-path', type=str, default='data/modelnet',
                       help='path to datasets')
 exp_args.add_argument('--dataset', type=str, default='kpts',
                       help='name of the datasets')

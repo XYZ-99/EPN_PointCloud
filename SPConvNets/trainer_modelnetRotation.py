@@ -29,7 +29,7 @@ class Trainer(vgtk.Trainer):
                                                         num_workers=self.opt.num_thread)
             self.dataset_iter = iter(self.dataset)
 
-        dataset_test = dataloader(self.opt, 'testR')
+        dataset_test = dataloader(self.opt, 'test')
         self.dataset_test = torch.utils.data.DataLoader(dataset_test, \
                                                         batch_size=self.opt.batch_size, \
                                                         shuffle=True, \

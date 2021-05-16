@@ -33,7 +33,8 @@ class Dataloader_ModelNet40(data.Dataset):
         self.dataset_path = opt.dataset_path
         self.all_data = []
         for cat in cats:
-            for fn in glob.glob(os.path.join(opt.dataset_path, cat, self.mode, "*.mat")):
+            # for fn in glob.glob(os.path.join(opt.dataset_path, cat, self.mode, "*.mat")):
+            for fn in glob.glob(os.path.join(opt.dataset_path, cat, self.mode, "*.npz")):
                 self.all_data.append(fn)
         print("[Dataloader] : Training dataset size:", len(self.all_data))
 
@@ -47,8 +48,14 @@ class Dataloader_ModelNet40(data.Dataset):
         return len(self.all_data)
 
     def __getitem__(self, index):
-        data = sio.loadmat(self.all_data[index])
-        _, pc = pctk.uniform_resample_np(data['pc'], self.opt.model.input_num)
+        # data = sio.loadmat(self.all_data[index])
+        data = np.load(self.all_data[index])
+        # _, pc = pctk.uniform_resample_np(data['pc'], self.opt.model.input_num)
+
+
+        # [10000, 3], the dimension should be correct according to the comments
+        _, pc = pctk.uniform_resample_np(data['points'], self.opt.model.input_num)
+
         pc = p3dtk.normalize_np(pc.T)
         pc = pc.T
 
@@ -81,7 +88,7 @@ class Dataloader_ModelNet40(data.Dataset):
 
         return {'pc':torch.from_numpy(pc.astype(np.float32)),
                 'label':torch.from_numpy(data['label'].flatten()).long(),
-                'fn': data['name'][0],
+                # 'fn': data['name'][0],
                 'R': R,
                 'R_label': torch.Tensor([R_label]).long(),
                }
@@ -111,7 +118,8 @@ class Dataloader_ModelNet40Alignment(data.Dataset):
         self.dataset_path = opt.dataset_path
         self.all_data = []
         for cat in cats:
-            for fn in glob.glob(os.path.join(opt.dataset_path, cat, self.mode, "*.mat")):
+            # for fn in glob.glob(os.path.join(opt.dataset_path, cat, self.mode, "*.mat")):
+            for fn in glob.glob(os.path.join(opt.dataset_path, cat, self.mode, "*.npz")):
                 self.all_data.append(fn)
         print("[Dataloader] : Training dataset size:", len(self.all_data))
 
@@ -120,8 +128,12 @@ class Dataloader_ModelNet40Alignment(data.Dataset):
         return len(self.all_data)
 
     def __getitem__(self, index):
-        data = sio.loadmat(self.all_data[index])
-        _, pc = pctk.uniform_resample_np(data['pc'], self.opt.model.input_num)
+        # data = sio.loadmat(self.all_data[index])
+        data = np.load(self.all_data[index])
+        # _, pc = pctk.uniform_resample_np(data['pc'], self.opt.model.input_num)
+
+        # [10000, 3], the dimension should be correct according to the comments
+        _, pc = pctk.uniform_resample_np(data['points'], self.opt.model.input_num)
 
         # normalization
         pc = p3dtk.normalize_np(pc.T)
@@ -160,7 +172,7 @@ class Dataloader_ModelNet40Alignment(data.Dataset):
         pc_tensor = np.stack([pc_src, pc_tgt])
 
         return {'pc':torch.from_numpy(pc_tensor.astype(np.float32)),
-                'fn': data['name'][0],
+                # 'fn': data['name'][0],
                 'T' : torch.from_numpy(T.astype(np.float32)),
                 'R': torch.from_numpy(R.astype(np.float32)),
                 'R_label': torch.Tensor([R_label]).long(),
