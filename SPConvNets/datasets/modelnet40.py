@@ -148,6 +148,7 @@ class Dataloader_ModelNet40Alignment(data.Dataset):
         # else:
         #     pc_src, R_src = pctk.rotate_point_cloud(pc)
 
+        # Rotated point cloud, rotation matrix
         pc_src, R_src = pctk.rotate_point_cloud(pc)
         # target shape
 

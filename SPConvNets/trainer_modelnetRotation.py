@@ -95,6 +95,7 @@ class Trainer(vgtk.Trainer):
         in_alignment = data['T'].to(self.opt.device).float()
         in_R = data['R'].to(self.opt.device).float()
 
+        # return: [nb, na, na], [nb, n_out, na, na]
         preds, y = self.model(in_tensors)
         self.optimizer.zero_grad()
 

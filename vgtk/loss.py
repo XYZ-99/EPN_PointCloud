@@ -104,7 +104,7 @@ class MultiTaskDetectionLoss(torch.nn.Module):
     def forward(self, wts, label, y, gt_R, gt_T=None):
         ''' setting for alignment regression:
                 - label (nb, na):
-                    label the targte anchor from the perspective of source anchor na
+                    label the target anchor from the perspective of source anchor na
                 - wts (nb, na_tgt, na_src) normalized confidence weights
                 - y (nb, nr, na_tgt, na_src) features
                 - gt_R (nb, na, 3, 3)
