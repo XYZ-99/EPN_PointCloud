@@ -131,3 +131,6 @@ dmypy.json
 .idea/
 data/
 sbatch_script.sh
+sbatch_script_R_6d.sh
+sbatch_script_quat.sh
+sbatch_script_6d.sh

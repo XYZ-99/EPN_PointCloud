@@ -38,7 +38,8 @@ net_args.add_argument('--normals', action='store_true', help='If set, add normal
 net_args.add_argument('-u', '--flag', type=str, default='max',
                       help='pooling method: max | mean | attention | rotation')
 net_args.add_argument('--representation', type=str, default='quat',
-                      help='how to represent rotation: quaternion | ortho6d ')
+                      # help='how to represent rotation: quaternion | ortho6d ')
+                      help='how to represent rotation: quat | ortho6d ')
 
 
 
