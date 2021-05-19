@@ -11,6 +11,7 @@ from torch.nn.modules.batchnorm import _BatchNorm
 # from vgtk.so3conv import Gathering
 from vgtk.so3conv.functional import batched_index_select, acos_safe
 from vgtk.functional import compute_rotation_matrix_from_quaternion, compute_rotation_matrix_from_ortho6d, so3_mean
+from vgtk.functional import compute_quaternion_from_rotation_matrix, compute_ortho6d_from_rotation_matrix
 import vgtk.so3conv as sgtk
 
 # ------------------------------------- loss ------------------------------------
@@ -91,7 +92,7 @@ def batched_select_anchor(labels, y, rotation_mapping):
     return pred_RAnchor
 
 class MultiTaskDetectionLoss(torch.nn.Module):
-    def __init__(self, anchors, nr=4, w=10, threshold=1.0, ):
+    def __init__(self, anchors, nr=4, w=10, threshold=1.0, opt=None):
         super(MultiTaskDetectionLoss, self).__init__()
         self.classifier = CrossEntropyLoss()
         self.anchors = anchors
@@ -100,6 +101,7 @@ class MultiTaskDetectionLoss(torch.nn.Module):
         self.w = w
         self.threshold = threshold
         self.iter_counter = 0
+        self.opt = opt
 
     def forward(self, wts, label, y, gt_R, gt_T=None):
         ''' setting for alignment regression:
@@ -168,7 +170,23 @@ class MultiTaskDetectionLoss(torch.nn.Module):
             pred_R = so3_mean(pred_Rs, confidence)
 
             # option 1: l2 loss for the prediction at each "tight" anchor pair
-            l2_loss = torch.pow(gt_R - select_RAnchor,2).mean()
+            if self.opt is None or self.opt.loss_type == 'matrix_l2':
+                l2_loss = torch.pow(gt_R - select_RAnchor,2).mean()
+            elif self.opt.loss_type == 'repre_l2':
+                # self.opt is not None
+                # [nb*na, 3, 3] -> [nb * na, 4|6]
+                if self.opt.model.representation == 'quat':
+                    gt_R_repre = compute_quaternion_from_rotation_matrix(gt_R.view(-1, 3, 3))
+                    select_RAnchor_repre = compute_quaternion_from_rotation_matrix(select_RAnchor.view(-1, 3, 3))
+                    l2_loss = min(torch.pow(gt_R_repre - select_RAnchor_repre, 2).mean(),
+                                  torch.pow(gt_R_repre + select_RAnchor_repre, 2).mean())
+                elif self.opt.model.representation == 'ortho6d':
+                    gt_R_repre = compute_ortho6d_from_rotation_matrix(gt_R.view(-1, 3, 3))
+                    select_RAnchor_repre = compute_ortho6d_from_rotation_matrix((select_RAnchor.view(-1, 3, 3)))
+                    l2_loss = torch.pow(gt_R_repre - select_RAnchor_repre, 2).mean()
+            else:
+                NotImplementedError('Loss other than matrix_l2 and repre_l2 is not implemented.')
+
 
             # option 2: l2 loss based on the relative prediction with gt label
             # l2_loss = torch.pow(true_R - pred_R_with_label,2).mean() # + torch.pow(gt_R - select_RAnchor,2).mean()

@@ -64,7 +64,7 @@ class Trainer(vgtk.Trainer):
         else:
             raise KeyError("Unrecognized representation of rotation: %s"%self.opt.model.representation)
 
-        self.metric = vgtk.MultiTaskDetectionLoss(anchors, nr=out_channel)
+        self.metric = vgtk.MultiTaskDetectionLoss(anchors, nr=out_channel, opt=self.opt)
 
     # For epoch-based training
     def epoch_step(self):

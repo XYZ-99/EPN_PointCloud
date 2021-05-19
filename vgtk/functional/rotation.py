@@ -448,10 +448,13 @@ def compute_quaternion_from_rotation_matrix(matrix):
     # [b, 4]
     quat = torch.cat((qw.view(-1, 1), qx.view(-1, 1), qy.view(-1, 1), qz.view(-1, 1)), dim=1)
 
-    if abs(torch.sum(torch.square(quat), dim=1).item() - batch) > 1e-3:
+    if abs(torch.sum(torch.square(quat)).item() - batch) > 1e-3:
         print("In compute_quaternion_from_rotation_matrix: quaternion is not unit")
         print(matrix[0])
         print(quat[0])
+        ValueError('The quaternion is not unit.')
+
+    return quat
 
 
 #euler_sin_cos batch*6

@@ -67,6 +67,8 @@ train_args.add_argument('--eval-freq', type=int, default=5000,
                         help='frequency of evaluation (iters)')
 train_args.add_argument('--debug-mode', type=str, default=None,
                         help='if specified, train with a certain debug procedure')
+train_args.add_argument('--loss-type', type=str, default='matrix_l2',
+                        help='[matrix_l2|repre_l2], repre_l2 is directly regressing the output representation.')
 
 
 # Learning rate arguments
