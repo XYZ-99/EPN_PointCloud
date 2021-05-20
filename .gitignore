@@ -134,3 +134,4 @@ sbatch_script.sh
 sbatch_script_R_6d.sh
 sbatch_script_quat.sh
 sbatch_script_6d.sh
+sbatch_script_r_9d.sh

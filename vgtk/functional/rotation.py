@@ -525,6 +525,21 @@ def compute_ortho6d_from_rotation_matrix(matrix):
     """
     return torch.cat((matrix[:, :, 0], matrix[:, :, 1]), dim=1)
 
+def compute_rotation_matrix_from_9d(vec_9d):
+    """
+    Maps 9D input vectors onto SO(3) via symmetric orthogonalization.
+    Credit: https://github.com/google-research/google-research/tree/master/special_orthogonalization
+    :param x: should have size [b, 9]
+    :type output: [b, 3, 3]
+    """
+    m = vec_9d.view(-1, 3, 3)
+    u, s, v = torch.svd(m)
+    vt = torch.transpose(v, 1, 2)
+    det = torch.det(torch.matmul(u, vt))
+    det = det.view(-1, 1, 1)
+    vt = torch.cat((vt[:, :2, :], vt[:, -1:, :] * det), 1)
+    r = torch.matmul(u, vt)
+    return r
 
 # torch function
 def so3_mean(Rs, weights=None):

@@ -582,6 +582,7 @@ class SO3OutBlockR(nn.Module):
         self.attention_layer = nn.Conv2d(mlp[-1], 1, (1,1))
 
         # out channel equals 4 for quaternion representation, 6 for ortho representation
+        # this module seems discarded
         self.regressor_layer = nn.Conv2d(mlp[-1],4,(1,1))
 
         # ------------------ uniary conv ----------------
@@ -629,6 +630,8 @@ class RelSO3OutBlockR(nn.Module):
             self.out_channel = 4
         elif rp == 'ortho6d':
             self.out_channel = 6
+        elif rp == '9d':
+            self.out_channel = 9
         else:
             raise KeyError("Unrecognized representation of rotation: %s"%rp)
 

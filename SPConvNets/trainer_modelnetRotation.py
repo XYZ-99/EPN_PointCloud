@@ -61,6 +61,8 @@ class Trainer(vgtk.Trainer):
             out_channel = 4
         elif self.opt.model.representation == 'ortho6d':
             out_channel = 6
+        elif self.opt.model.representation == '9d':
+            out_channel = 9
         else:
             raise KeyError("Unrecognized representation of rotation: %s"%self.opt.model.representation)
 
