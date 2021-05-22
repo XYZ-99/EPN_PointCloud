@@ -412,9 +412,54 @@ def compute_rotation_matrix_from_quaternion(quaternion):
     row1 = torch.cat((2*xy+ 2*zw,  1-2*xx-2*zz, 2*yz-2*xw  ), 1) #batch*3
     row2 = torch.cat((2*xz-2*yw,   2*yz+2*xw,   1-2*xx-2*yy), 1) #batch*3
 
-    matrix = torch.cat((row0.view(batch, 1, 3), row1.view(batch,1,3), row2.view(batch,1,3)),1) #batch*3*3
+    matrix = torch.cat((row0.view(batch,1,3), row1.view(batch,1,3), row2.view(batch,1,3)),1) #batch*3*3
 
     return matrix
+
+def compute_quaternion_from_rotation_matrix(matrix):
+    """
+    Inverse of compute_rotation_matrix_from_quaternion.
+    :param matrix: [b, 3, 3]
+    :type quaternion: [b, 4]
+    """
+    batch = matrix.shape[0]
+
+    ########### The rotation matrix is actually transposed ###########
+    matrix = torch.transpose(matrix, 1, 2).contiguous()
+    ########### The rotation matrix is actually transposed ###########
+
+    # [b]
+    trace = torch.einsum('bii->b', matrix)
+    # [b]
+    qw = torch.sqrt(trace + 1) / 2
+    # should not have any trace < -1
+    assert torch.isnan(qw).any().item() == False
+
+    # [b]
+    r23 = matrix[:, 1, 2]
+    r32 = matrix[:, 2, 1]
+    qx = (r23 - r32) / (4*qw)
+
+    # [b]
+    r31 = matrix[:, 2, 0]
+    r13 = matrix[:, 0, 2]
+    qy = (r31 - r13) / (4*qw)
+
+    # [b]
+    r12 = matrix[:, 0, 1]
+    r21 = matrix[:, 1, 0]
+    qz = (r12 - r21) / (4*qw)
+
+    # [b, 4]
+    quat = torch.cat((qw.view(-1, 1), qx.view(-1, 1), qy.view(-1, 1), qz.view(-1, 1)), dim=1)
+
+    if abs(torch.sum(torch.square(quat)).item() - batch) > 1e-3:
+        print("In compute_quaternion_from_rotation_matrix: quaternion is not unit")
+        print(matrix[0])
+        print(quat[0])
+        ValueError('The quaternion is not unit.')
+
+    return quat
 
 
 #euler_sin_cos batch*6
@@ -476,6 +521,30 @@ def compute_rotation_matrix_from_ortho6d(ortho6d):
     z = z.view(-1,3,1)
     matrix = torch.cat((x,y,z), 2) #batch*3*3
     return matrix
+
+def compute_ortho6d_from_rotation_matrix(matrix):
+    """
+    Inverse of compute_rotation_matrix_from_ortho6d.
+    :param matrix: [b, 3, 3]
+    :type othor6d: [b, 6]
+    """
+    return torch.cat((matrix[:, :, 0], matrix[:, :, 1]), dim=1)
+
+def compute_rotation_matrix_from_9d(vec_9d):
+    """
+    Maps 9D input vectors onto SO(3) via symmetric orthogonalization.
+    Credit: https://github.com/google-research/google-research/tree/master/special_orthogonalization
+    :param x: should have size [b, 9]
+    :type output: [b, 3, 3]
+    """
+    m = vec_9d.view(-1, 3, 3)
+    u, s, v = torch.svd(m)
+    vt = torch.transpose(v, 1, 2)
+    det = torch.det(torch.matmul(u, vt))
+    det = det.view(-1, 1, 1)
+    vt = torch.cat((vt[:, :2, :], vt[:, -1:, :] * det), 1)
+    r = torch.matmul(u, vt)
+    return r
 
 # torch function
 def so3_mean(Rs, weights=None):

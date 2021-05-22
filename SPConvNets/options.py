@@ -38,7 +38,8 @@ net_args.add_argument('--normals', action='store_true', help='If set, add normal
 net_args.add_argument('-u', '--flag', type=str, default='max',
                       help='pooling method: max | mean | attention | rotation')
 net_args.add_argument('--representation', type=str, default='quat',
-                      help='how to represent rotation: quaternion | ortho6d ')
+                      # help='how to represent rotation: quaternion | ortho6d ')
+                      help='how to represent rotation: quat | ortho6d | 9d')
 
 
 
@@ -66,6 +67,8 @@ train_args.add_argument('--eval-freq', type=int, default=5000,
                         help='frequency of evaluation (iters)')
 train_args.add_argument('--debug-mode', type=str, default=None,
                         help='if specified, train with a certain debug procedure')
+train_args.add_argument('--loss-type', type=str, default='matrix_l2',
+                        help='[matrix_l2|repre_l2], repre_l2 is directly regressing the output representation.')
 
 
 # Learning rate arguments
