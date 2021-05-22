@@ -423,6 +423,11 @@ def compute_quaternion_from_rotation_matrix(matrix):
     :type quaternion: [b, 4]
     """
     batch = matrix.shape[0]
+
+    ########### The rotation matrix is actually transposed ###########
+    matrix = torch.transpose(matrix, 1, 2).contiguous()
+    ########### The rotation matrix is actually transposed ###########
+
     # [b]
     trace = torch.einsum('bii->b', matrix)
     # [b]
