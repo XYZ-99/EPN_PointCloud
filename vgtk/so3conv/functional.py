@@ -15,8 +15,37 @@ import vgtk.pc as pctk
 # import vgtk.cuda.gathering as gather
 import grouping as cuda_nn
 
+from . import SphericalPointCloud
 # import vgtk.zpconv as zpconv
 
+def nearest_upsample(x, x_up):
+    """
+    Upsample according to the nearest neighbor in translations.
+    :param x: SphrericalPointCloud, the sparser cloud to be upsampled
+                - xyz:    [b, 3, p1]
+                - feats:  [b, c1, p1, na]
+    :param x_up: SphericalPointCloud, the denser cloud
+                - xyz:    [b, 3, p2]
+                - feats:  [b, c2, p2, na] (not used)
+    :type x_out: SphericalPointCloud: the upsampled SphericalPointCloud
+                - xyz:    [b, 3, p2]
+                - feats:  [b, c1, p2, na]
+    """
+    # TODO: may improve efficiency.
+    b, c1, p1, na = x.feats.shape
+    p2 = x_up.xyz.shape[2]
+    new_feats = torch.empty((b, c1, p2, na)).to(x_up.feats.device)
+
+    for batch in range(b):
+        for point in range(p2):
+            coord = x_up.xyz[batch, :, point].unsqueeze(1).expand(-1, p1) # [3, p1]
+            distances_sq = torch.sum(torch.square(coord - x.xyz[batch, :, :]), dim=0)
+            min_index = torch.argmin(distances_sq).item()
+
+            # inherit the features
+            new_feats[batch, :, point, :] = x.feats[batch, :, min_index, :]
+
+    return SphericalPointCloud(x_up.xyz, new_feats, x_up.anchors)
 
 def acos_safe(x, eps=1e-4):
     sign = torch.sign(x)

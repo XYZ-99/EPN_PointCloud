@@ -50,6 +50,7 @@ class Trainer(vgtk.Trainer):
             param_outfile = None
 
         module = import_module('SPConvNets.models')
+        # build models from here
         self.model = getattr(module, self.opt.model.model).build_model_from(self.opt, param_outfile)
 
     def _setup_metric(self):
@@ -66,6 +67,7 @@ class Trainer(vgtk.Trainer):
         else:
             raise KeyError("Unrecognized representation of rotation: %s"%self.opt.model.representation)
 
+        # TODO: new loss
         self.metric = vgtk.MultiTaskDetectionLoss(anchors, nr=out_channel, opt=self.opt)
 
     # For epoch-based training
@@ -101,7 +103,7 @@ class Trainer(vgtk.Trainer):
         preds, y = self.model(in_tensors)
         self.optimizer.zero_grad()
 
-        # TODO
+        # TODO: See if we need to change
         self.loss, cls_loss, l2_loss, acc, error = self.metric(preds, in_rot_label, y, in_R, in_alignment)
         self.loss.backward()
         self.optimizer.step()
@@ -144,7 +146,7 @@ class Trainer(vgtk.Trainer):
                 in_R = data['R'].to(self.opt.device).float()
 
                 preds, y = self.model(in_tensors)
-                # TODO
+                # TODO: See if the loss has to be changed
                 self.loss, cls_loss, l2_loss, acc, error = self.metric(preds, in_rot_label, y, in_R, in_alignment)
                 # all_labels.append(in_label.cpu().numpy())
                 # all_feats.append(feat.cpu().numpy())

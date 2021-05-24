@@ -179,7 +179,9 @@ class PointnetSO3Conv(nn.Module):
         if na == 1:
             feats = torch.cat([x.feats, xyz[...,None]],1)
         else:
+            # rotated xyz: [b, 3, np, na]
             xyzr = torch.einsum('aji,bjn->bina',self.anchors,xyz)
+            # [nb, nc+3, np, na]
             feats = torch.cat([x.feats, xyzr],1)
 
         feats = self.embed(feats)

@@ -156,6 +156,39 @@ class BasicSO3ConvBlock(nn.Module):
     def get_anchor(self):
         return torch.from_numpy(sptk.get_anchors())
 
+class BasicUpsampleSO3ConvBlock(nn.Module):
+    def __init__(self, params):
+        """
+        :param params: should include all the fields used in BasicSO3Conv
+        """
+        super(BasicUpsampleSO3ConvBlock, self).__init__()
+
+        self.conv_block = BasicSO3ConvBlock(params)
+
+    def forward(self, x, x_up):
+        """
+
+        :param x:       SphericalPointCloud, the points to be upsampled
+                            xyz:    [b, 3, p1]
+                            feats:  [b, c1, p1, na]
+        :param x_up:    SphericalPointCloud, the skip-linked points; should be twice as large as x.
+                            xyz:    [b, 3, p2]
+                            feats:  [b, c2, p2, na]
+        :type x_out:    SphericalPointCloud
+                            xyz:    [b, 3, p2]
+                            feats:  [b, dim_out, p2, na]
+        """
+        # For the last layer of upsampling, there might not be skipped features to concat.
+        if x_up is not None:
+            # x: [b, 3, p2] x [b, c1, p2, na]
+            x = sptk.nearest_upsample(x, x_up)
+            # x: [b, 3, p2] x [b, c1+c2, p2, na]
+            x = sptk.SphericalPointCloud(x.xyz, torch.cat((x.feats, x_up.feats), dim=1), x.anchors)
+
+        x = self.conv_block(x)
+
+        return x
+
 class SeparableSO3ConvBlock(nn.Module):
     def __init__(self, params):
         super(SeparableSO3ConvBlock, self).__init__()
@@ -611,6 +644,10 @@ class SO3OutBlockR(nn.Module):
 
 # outblock for relative rotation regression
 class RelSO3OutBlockR(nn.Module):
+    """
+    :param: f1, f2, x1, x2
+    :return: [nb, na, na], [nb, n_out, na, na]
+    """
     def __init__(self, params, norm=None):
         super(RelSO3OutBlockR, self).__init__()
 
@@ -678,6 +715,16 @@ class RelSO3OutBlockR(nn.Module):
 
     def _pooling(self, x):
         # [nb, nc, na]
-        x_out = self.pointnet(x)
+        x_out = self.pointnet(x) # [nb, nc, na]
         x_out = F.relu(x_out)
         return x_out
+
+# class SegSO3OutBlock(nn.Module):
+#     """
+#     :param input: [b, 3, np] x [b, nc, np, na]
+#     :return: [nb, na, na], [nb, n_out, na, na]
+#     """
+#     def __init__(self, params):
+#         super(SegSO3OutBlock, self).__init__()
+
+

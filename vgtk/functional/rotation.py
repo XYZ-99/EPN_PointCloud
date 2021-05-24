@@ -590,9 +590,9 @@ def so3_mean(Rs, weights=None):
 def label_relative_rotation_np(anchors, T):
     """
     :param T: R_src (pc_src = R_src * [pc_tgt|pc])
-    :type anchors: object
+    :param anchors: [na, 3, 3]
     """
-    # TODO: ?
+    # [na, na, 3, 3]: anchor1^T * T * anchor2
     T_from_anchors = np.einsum('abc,bj,ijk -> aick', anchors, T, anchors)
 
 
