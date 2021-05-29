@@ -12,6 +12,8 @@ from . import functional as L
 
 KERNEL_CONDENSE_RATIO = 0.7
 
+from point_transformer.point_transformer_modules import PointTransformerLayer, MLP
+from point_transformer.pointnet2_modules import farthest_point_sample, gather_operation
 
 # Basic SO3Conv
 # [b, c1, k, p, a] -> [b, c2, p, a]
@@ -185,3 +187,61 @@ class PointnetSO3Conv(nn.Module):
         feats = self.embed(feats)
         feats = torch.max(feats,2)[0]
         return feats # nb, nc, na
+
+class PointTransformerSO3Conv(nn.Module):
+    def __init__(self, dim_in, dim_out, kanchor=60, stride=1): # TODO: so many other params that p_t needs
+        super(PointTransformerSO3Conv, self).__init__()
+
+        self.dim_in = dim_in
+        self.dim_out = dim_out
+        self.kanchor = kanchor
+        self.stride = stride
+        anchors = L.get_anchors(kanchor)
+        self.mlp = None
+        if dim_in != dim_out:
+            # TODO: decide the last two arguments
+            self.mlp = MLP(dim=1, in_channel=dim_in, mlp=[dim_out], use_bn=True, skip_last=False)
+        self.transformer = PointTransformerLayer(dim_out)
+
+        self.register_buffer("anchors", torch.from_numpy(anchors))
+
+    def forward(self, x):
+        """
+        :param x: SphericalPointCloud: [nb, 3, np] x [nb, dim_in, np, na]
+        :return: SphericalPointCloud: [nb, 3, np] x [nb, dim_out, np, na]
+        """
+        nb, dim_in, np, na = x.feats.shape
+        if self.stride > 1:
+            new_np = np // self.stride
+            fps_idx = farthest_point_sample(x.xyz.permute(0, 2, 1).contiguous(), new_np).int() # [b, npoint]
+            xyz = gather_operation(x.xyz, fps_idx)
+
+            # [b, np] -> [b, dim_in, np, na]
+            fps_idx_feat = fps_idx.unsqueeze(1)
+            fps_idx_feat = fps_idx_feat.unsqueeze(3)
+            fps_idx_feat = fps_idx_feat.expand((-1, dim_in, -1, na))
+
+            feats = torch.gather(x.feats, 2, fps_idx_feat.long())
+        else:
+            new_np = np
+            xyz = x.xyz
+            feats = x.feats
+            fps_idx = None # TODO: may need to initialize a correct idx
+
+        new_feats = torch.empty(nb, self.dim_out, new_np, na).to(x.feats.device)
+        for i in range(self.kanchor):
+            # rotate the point cloud
+            rotated_xyz = torch.einsum("ij, bjn->bin", self.anchors[i], xyz)
+            # select the feature
+            feat = feats[:, :, :, i]
+            # [nb, dim_in, np] -> [nb, dim_out, np]
+            if self.mlp is not None:
+                feat = self.mlp(feat)
+            # go through point transformer
+            feat = self.transformer(rotated_xyz, feat)
+            # concat features
+            new_feats[:, :, :, i] = feat
+
+
+        # return
+        return fps_idx, SphericalPointCloud(xyz, new_feats, self.anchors)

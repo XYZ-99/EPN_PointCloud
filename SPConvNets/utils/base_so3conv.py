@@ -11,7 +11,8 @@ from torch.nn.modules.batchnorm import _BatchNorm
 
 # import vgtk.zpconv as zptk
 import vgtk.so3conv as sptk
-# SO3 Conv
+
+from point_transformer.networks import PointTransformer
 
 # [nb, np, 3] -> [nb, 3, np] x [nb, 1, np, na]
 def preprocess_input(x, na, add_center=True):
@@ -81,6 +82,9 @@ class PropagationBlock(nn.Module):
 
 # [b, c1, p1, a] -> [b, c1, k, p2, a] -> [b, c2, p2, a]
 class InterSO3ConvBlock(nn.Module):
+    """
+    sample_idx: [b, n2]
+    """
     def __init__(self, dim_in, dim_out, kernel_size, stride,
                  radius, sigma, n_neighbor, multiplier, kanchor=60,
                  lazy_sample=None, norm=None, activation='relu', pooling='none', dropout_rate=0):
@@ -130,6 +134,8 @@ class BasicSO3ConvBlock(nn.Module):
                 conv = InterSO3ConvBlock(**param['args'])
             elif param['type'] == 'separable_block':
                 conv = SeparableSO3ConvBlock(param['args'])
+            elif param['type'] == 'transformer_block':
+                conv = TransformerSO3ConvBlock(param['args'])
             else:
                 raise ValueError(f'No such type of SO3Conv {param["type"]}')
             self.layer_types.append(param['type'])
@@ -148,6 +154,8 @@ class BasicSO3ConvBlock(nn.Module):
             elif param['type'] in ['intra_block']:
                 # Intra Convolution
                 x = conv(x)
+            elif param['type'] in ['transformer_block']:
+                _, x = conv(x)
             else:
                 raise ValueError(f'No such type of SO3Conv {param["type"]}')
 
@@ -199,6 +207,53 @@ class SeparableSO3ConvBlock(nn.Module):
         skip_feature = self.relu(self.norm(skip_feature))
         x_out = sptk.SphericalPointCloud(x.xyz, x.feats + skip_feature, x.anchors)
         return inter_idx, inter_w, sample_idx, x_out
+
+    def get_anchor(self):
+        return torch.from_numpy(sptk.get_anchors())
+
+class TransformerSO3ConvBlock(nn.Module):
+    def __init__(self, params):
+        super(TransformerSO3ConvBlock, self).__init__()
+
+        dim_in = params['dim_in']
+        dim_out = params['dim_out']
+
+        self.use_intra = params['kanchor'] > 1
+
+        self.transformer = sptk.PointTransformerSO3Conv(dim_in, dim_out, params["kanchor"], params["stride"])
+
+        intra_args = {
+            'dim_in': dim_out,
+            'dim_out': dim_out,
+            'dropout_rate': params['dropout_rate'],
+            'activation': params['activation'],
+        }
+
+        if self.use_intra:
+            self.intra_conv = IntraSO3ConvBlock(**intra_args)
+        self.stride = params['stride']
+
+        # 1x1 conv for skip connection
+        self.skip_conv = nn.Conv2d(dim_in, dim_out, 1)
+        self.norm = nn.InstanceNorm2d(dim_out, affine=False)
+        self.relu = getattr(F, params['activation'])
+
+
+    def forward(self, x):
+        '''
+            inter, intra conv with skip connection
+        '''
+        skip_feature = x.feats
+        sample_idx, x = self.transformer(x) # TODO: check sample_index is valid
+
+        if self.use_intra:
+            x = self.intra_conv(x)
+        if self.stride > 1:
+            skip_feature = sptk.functional.batched_index_select(skip_feature, 2, sample_idx.long())
+        skip_feature = self.skip_conv(skip_feature)
+        skip_feature = self.relu(self.norm(skip_feature))
+        x_out = sptk.SphericalPointCloud(x.xyz, x.feats + skip_feature, x.anchors)
+        return sample_idx, x_out
 
     def get_anchor(self):
         return torch.from_numpy(sptk.get_anchors())
