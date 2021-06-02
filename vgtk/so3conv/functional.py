@@ -289,6 +289,7 @@ def inter_so3conv_grouping_anchor(grouped_xyz, anchors,
     '''
 
     # kernel rotations:  3, na, ks
+    # [na, 3, 3] x [ks, 3] -> [na, 3, ks]  -> [3, na, ks]
     rotated_kernels = torch.matmul(anchors, kernels.transpose(0,1)).permute(1,0,2).contiguous()
 
     # calculate influences: [3, na, ks] x [b, 3, p2, nn] -> [b, p2, na, ks, nn] weights

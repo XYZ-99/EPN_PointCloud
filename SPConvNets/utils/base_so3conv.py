@@ -135,7 +135,7 @@ class BasicSO3ConvBlock(nn.Module):
             elif param['type'] == 'separable_block':
                 conv = SeparableSO3ConvBlock(param['args'])
             elif param['type'] == 'transformer_block':
-                conv = TransformerSO3ConvBlock(param['args'])
+                conv = TransformerSO3ConvBlock(param['args']) # TODO: add an argument in param
             else:
                 raise ValueError(f'No such type of SO3Conv {param["type"]}')
             self.layer_types.append(param['type'])
@@ -220,7 +220,10 @@ class TransformerSO3ConvBlock(nn.Module):
 
         self.use_intra = params['kanchor'] > 1
 
-        self.transformer = sptk.PointTransformerSO3Conv(dim_in, dim_out, params["kanchor"], params["stride"])
+        if params['batch']:
+            self.transformer = sptk.PointTransformerBatchSO3Conv(dim_in, dim_out, params["kanchor"], params["stride"])
+        else:
+            self.transformer = sptk.PointTransformerSO3Conv(dim_in, dim_out, params["kanchor"], params["stride"])
 
         intra_args = {
             'dim_in': dim_out,

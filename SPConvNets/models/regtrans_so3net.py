@@ -54,6 +54,7 @@ def build_model(opt,
                 mlps=[[32,32], [64,64], [128,128],[256]],
                 out_mlps=[256,128,64],
                 strides=[2,2,2,2],
+                batch=True,
                 initial_radius_ratio = 0.2,
                 sampling_ratio = 0.8,
                 sampling_density = 0.5,
@@ -152,6 +153,7 @@ def build_model(opt,
                     'activation': 'leaky_relu',
                     'pooling': xyz_pooling,
                     'kanchor': na,
+                    'batch': batch
                 }
             }
             block_param.append(conv_param)

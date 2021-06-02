@@ -12,7 +12,8 @@ from . import functional as L
 
 KERNEL_CONDENSE_RATIO = 0.7
 
-from point_transformer.point_transformer_modules import PointTransformerLayer, MLP
+from point_transformer.point_transformer_modules import PointTransformerLayer, MLP, \
+                                            PointTransformerBatchLayer, BatchMLP
 from point_transformer.pointnet2_modules import farthest_point_sample, gather_operation
 
 # Basic SO3Conv
@@ -245,3 +246,43 @@ class PointTransformerSO3Conv(nn.Module):
 
         # return
         return fps_idx, SphericalPointCloud(xyz, new_feats, self.anchors)
+
+class PointTransformerBatchSO3Conv(nn.Module):
+    def __init__(self, dim_in, dim_out, kanchor=60, stride=1):
+        super(PointTransformerBatchSO3Conv, self).__init__()
+
+        self.dim_in = dim_in
+        self.dim_out = dim_out
+        self.kanchor = kanchor
+        self.stride = stride
+        anchors = L.get_anchors(kanchor)
+        self.register_buffer("anchors", torch.from_numpy(anchors))
+        self.mlp = None
+        if dim_in != dim_out:
+            self.mlp = BatchMLP(dim=1, in_channel=dim_in, mlp=[dim_out])
+        self.transformer = PointTransformerBatchLayer(dim_out)
+
+    def forward(self, x):
+        nb, dim_in, np, na = x.feats.shape
+        if self.stride > 1:
+            new_np = np // self.stride
+            fps_idx = farthest_point_sample(x.xyz.permute(0, 2, 1).contiguous(), new_np).int() # [b, npoint]
+            xyz = gather_operation(x.xyz, fps_idx)
+
+            # [b, np] -> [b, dim_in, np, na]
+            fps_idx_feat = fps_idx.unsqueeze(1)
+            fps_idx_feat = fps_idx_feat.unsqueeze(3)
+            fps_idx_feat = fps_idx_feat.expand((-1, dim_in, -1, na))
+
+            feats = torch.gather(x.feats, 2, fps_idx_feat.long())
+        else:
+            new_np = np
+            xyz = x.xyz
+            feats = x.feats
+            fps_idx = None # TODO: may need to initialize a correct idx
+
+        if self.mlp is not None:
+            feats = self.mlp(feats)
+        feats = self.transformer(xyz, feats, self.anchors)
+
+        return fps_idx, SphericalPointCloud(xyz, feats, self.anchors)
